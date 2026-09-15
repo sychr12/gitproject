@@ -30,7 +30,7 @@ export const Form = styled.form`
 
   input{
     flex:1;
-    border: 1px solid ${props => (props.$error ? '#FF0000' : '#eee')};
+    border: 1px solid ${props => (props.error ? '#FF0000' : '#eee')};
     padding: 10px 15px;
     border-radius: 4px;
     font-size: 17px;
@@ -51,7 +51,7 @@ const animate = keyframes`
 
 export const SubmitButton = styled.button.attrs(props => ({
   type: 'submit',
-  disabled: props.$loading,
+  disabled: props.loading,
 }))`
   background:#0D2636;
   border: 0;
@@ -69,7 +69,7 @@ export const SubmitButton = styled.button.attrs(props => ({
   }
 
 
-  ${props => props.$loading &&
+  ${props => props.loading &&
     css`
       svg{
         animation: ${animate} 2s linear infinite;

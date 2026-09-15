@@ -1,5 +1,4 @@
 import React, {useState, useCallback, useEffect} from 'react';
-import { Link } from 'react-router-dom';
 import { FaGithub, FaPlus, FaSpinner, FaBars, FaTrash } from 'react-icons/fa';
 import {Container, Form, SubmitButton, List, DeleteButton} from './styles';
 
@@ -8,69 +7,55 @@ import api from '../../services/api';
 export default function Main(){
 
   const [newRepo, setNewRepo] = useState('');
-  const [repositorios, setRepositorios] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('repos') || '[]');
-      return Array.isArray(saved)
-        ? saved.filter(repo => repo && typeof repo.name === 'string' && repo.name.trim())
-        : [];
-    } catch {
-      return [];
-    }
-  });
+  const [repositorios, setRepositorios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState(null);
 
+  // Buscar
+  useEffect(()=>{
+    const repoStorage = localStorage.getItem('repos');
+
+    if(repoStorage){
+      setRepositorios(JSON.parse(repoStorage));
+    }
+
+  }, []);
+
+  
   // Salvar alterações
   useEffect(()=>{
-    try {
-      localStorage.setItem('repos', JSON.stringify(repositorios));
-    } catch {
-      setAlert('Não foi possível salvar os repositórios neste navegador.');
-    }
+    localStorage.setItem('repos', JSON.stringify(repositorios));
   }, [repositorios]);
 
   const handleSubmit = useCallback((e)=>{
     e.preventDefault();
-    if (loading) return;
 
     async function submit(){
       setLoading(true);
       setAlert(null);
       try{
 
-        const repoName = newRepo.trim();
-        if(repoName === ''){
-          throw new Error('Você precisa indicar um repositório!');
+        if(newRepo === ''){
+          throw new Error('Você precisa indicar um repositorio!');
         }
 
-        if (!/^[^/\s]+\/[^/\s]+$/.test(repoName)) {
-          throw new Error('Informe o repositório no formato dono/nome.');
-        }
+        const response = await api.get(`repos/${newRepo}`);
 
-        const hasRepo = repositorios.some(repo => repo.name.toLowerCase() === repoName.toLowerCase());
+        const hasRepo = repositorios.find(repo => repo.name === newRepo);
 
         if(hasRepo){
-          throw new Error('Repositório duplicado.');
-        }
-
-        const response = await api.get(`repos/${repoName.split('/').map(encodeURIComponent).join('/')}`);
-        if (repositorios.some(repo => repo.name.toLowerCase() === response.data.full_name.toLowerCase())) {
-          throw new Error('Repositório duplicado.');
+          throw new Error('Repositorio Duplicado');
         }
   
         const data = {
           name: response.data.full_name,
         }
     
-        setRepositorios(current => [...current, data]);
+        setRepositorios([...repositorios, data]);
         setNewRepo('');
       }catch(error){
-        setAlert(error.isAxiosError
-          ? (error.response?.status === 404
-            ? 'Repositório não encontrado.'
-            : 'Não foi possível buscar o repositório. Tente novamente.')
-          : error.message);
+        setAlert(true);
+        console.log(error);
       }finally{
         setLoading(false);
       }
@@ -79,7 +64,7 @@ export default function Main(){
 
     submit();
 
-  }, [newRepo, repositorios, loading]);
+  }, [newRepo, repositorios]);
 
   function handleinputChange(e){
     setNewRepo(e.target.value);
@@ -87,8 +72,9 @@ export default function Main(){
   }
 
   const handleDelete = useCallback((repo)=> {
-    setRepositorios(current => current.filter(r => r.name !== repo));
-  }, []);
+    const find = repositorios.filter(r => r.name !== repo);
+    setRepositorios(find);
+  }, [repositorios]);
 
 
   return(
@@ -99,18 +85,15 @@ export default function Main(){
         Meus Repositorios
       </h1>
 
-      <Form onSubmit={handleSubmit} $error={alert}>
+      <Form onSubmit={handleSubmit} error={alert}>
         <input 
         type="text" 
         placeholder="Adicionar Repositorios"
-        aria-label="Repositório"
-        aria-invalid={Boolean(alert)}
-        aria-describedby={alert ? 'repo-error' : undefined}
         value={newRepo}
         onChange={handleinputChange}
         />
 
-        <SubmitButton $loading={loading} aria-label="Adicionar repositório">
+        <SubmitButton loading={loading ? 1 : 0}>
           {loading ? (
             <FaSpinner color="#FFF" size={14}/>
           ) : (
@@ -119,20 +102,19 @@ export default function Main(){
         </SubmitButton>
 
       </Form>
-      {alert && <p id="repo-error" role="alert">{alert}</p>}
 
       <List>
          {repositorios.map(repo => (
            <li key={repo.name}>
              <span>
-             <DeleteButton aria-label={`Excluir ${repo.name}`} onClick={()=> handleDelete(repo.name) }>
+             <DeleteButton onClick={()=> handleDelete(repo.name) }>
                 <FaTrash size={14}/>
              </DeleteButton>  
              {repo.name}
              </span>
-             <Link to={`/repositorio/${encodeURIComponent(repo.name)}`} aria-label={`Abrir ${repo.name}`}>
+             <a href="">
                <FaBars size={20}/>
-             </Link>
+             </a>
            </li>
          ))} 
       </List>
